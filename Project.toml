@@ -1,0 +1,13 @@
+name = "CosmoWeb"
+uuid = "024e840e-f3cc-4e69-b0c7-641dd261feca"
+authors = ["Daniel Forero-Sánchez"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
