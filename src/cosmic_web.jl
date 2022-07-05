@@ -40,6 +40,7 @@ function _rebin_field(field::Array{<:AbstractFloat, 3}, kernel_size::Tuple{<:Int
     init_shape = size(field)
     new_shape = [Int64(floor(init_shape[i] / kernel_size[i])) for i in 1:3]
     dropdims(sum(reshape(field, kernel_size[1], new_shape[1], kernel_size[2], new_shape[2], kernel_size[3], new_shape[3]), dims=(1, 3, 5)), dims=(1, 3, 5))
+    #dropdims(sum(reshape(field, new_shape[1], kernel_size[1], new_shape[2], kernel_size[2], new_shape[3], kernel_size[3]), dims=(2, 4, 6)), dims=(2, 4, 6))
 end
 
 

@@ -93,34 +93,24 @@ function powspec_fundamental_threads(delta::Array{<:AbstractFloat, 3}, box_size:
 
 end
 
-
-function powspec_fundamental(delta::Array{<:AbstractFloat, 3}, box_size::SVector{3}, k_lim::AbstractFloat)
-    dims = size(delta)
-    
+function mode_count_fundamental(delta_k::Array{<:Complex{T}, 3}, dims::Tuple{Int,Int,Int}, box_size::SVector{3,T}) where T <:AbstractFloat
     middle = [Int32(d / 2)  for d in dims]
-    k_fund = 2. * pi / box_size[1]
-    k_ny = middle * k_fund
-    k_max_par = middle
+    k_fund = 2. * pi / maximum(box_size)
+    k_ny = middle .* k_fund
     prefactor = [pi / d for d in dims]
-    k_max_per = Int32.(floor.(sqrt.(middle.^2 .+ middle.^2)))
     k_max = Int32.(floor.(sqrt.(middle.^2 .+ middle.^2 .+ middle.^2)))
-    println("Computing FFT.")
-    @time delta_k = rfft(delta)
-    delta_k[1,1,1] = 0.
-    println("Done")
-
-    
     k_edges = zeros(Float32, k_max[1] + 1)
     pk = [zeros(Float32, k_max[1] + 1) for _ in 1:3]
     pk_phase = zeros(Float32, k_max[1] + 1)
     n_modes = zeros(Int32, k_max[1] + 1)
+
     R = CartesianIndices(delta_k)
-    println("Computing Pk from FFT")
+
     for I in ProgressBar(R)
         kxx, kyy, kzz = Tuple(I) 
-        kx = kxx > middle[1] ? kxx - dims[1] : kxx
-        ky = kyy > middle[2] ? kyy - dims[2] : kyy
-        kz = kzz > middle[3] ? kzz - dims[3] : kzz
+        kx = (kxx - 1.) > middle[1] ? (kxx - dims[1] - 1) : (kxx - 1.)
+        ky = (kyy - 1.) > middle[2] ? (kyy - dims[2] - 1) : (kyy - 1.)
+        kz = (kzz - 1.) > middle[3] ? (kzz - dims[3] - 1) : (kzz - 1.)
         
         if (kx == 0.) || ((kx == middle[1] ) && (dims[2] % 2 == 0) )
             if ky < 0
@@ -132,8 +122,9 @@ function powspec_fundamental(delta::Array{<:AbstractFloat, 3}, box_size::SVector
             end
         end
 
-        
+    
         cic_corr = *([cic_correction(prefactor[1] * k_) for k_ in (kx, ky, kz)]...)
+        
         k_norm = sqrt(kx^2 + ky^2 + kz^2)
         
         k_index = Int32(floor(k_norm))
@@ -165,6 +156,25 @@ function powspec_fundamental(delta::Array{<:AbstractFloat, 3}, box_size::SVector
         pk[3][i] *= 9. / n_modes[i] * units_factor
         pk_phase[i] *= units_factor / n_modes[i]
     end
+
+    return k_edges, pk, pk_phase, n_modes
+end
+
+    
+
+function powspec_fundamental(delta::Array{<:T, 3}, box_size::SVector{3,T}, k_lim::T) where T<:AbstractFloat
+    dims = size(delta)
+    
+    
+    
+    
+    println("Computing FFT.")
+    @time delta_k = rfft(delta)
+    #delta_k[1,1,1] = 0.
+    println("Done")
+    println("Computing Pk from FFT")
+    @time k_edges, pk, pk_phase, n_modes = mode_count_fundamental(delta_k, dims, box_size)
+
     return [k for k in k_edges if k<k_lim], [[pk[j][i] for i in 1:length(k_edges) if k_edges[i]<k_lim] for j in 1:3], [pk_phase[i] for i in 1:length(k_edges) if k_edges[i]<k_lim], [n_modes[i] for i in 1:length(k_edges) if k_edges[i]<k_lim] 
 
 end

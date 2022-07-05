@@ -54,14 +54,15 @@ def pk_from_delta_k(delta_k, dims, box_size):
                 delta_k_sq = real**2 + imag**2
                 phase = np.arctan2(real, np.sqrt(delta_k_sq))
 
-
-                result[k_index,0] += k_norm
-                result[k_index,1] += delta_k_sq
-                result[k_index,2] += (delta_k_sq*(3.0*musq-1.0)/2.0)
-                result[k_index,3] += (delta_k_sq*(35.0*musq*musq - 30.0*musq + 3.0)/8.0)
-                result[k_index,4] += (phase*phase)
-                result[k_index,5] += 1.0
+                num = 2.
+                result[k_index,0] += k_norm * num
+                result[k_index,1] += delta_k_sq * num
+                result[k_index,2] += (delta_k_sq*(3.0*musq-1.0)/2.0) * num
+                result[k_index,3] += (delta_k_sq*(35.0*musq*musq - 30.0*musq + 3.0)/8.0) * num
+                result[k_index,4] += (phase*phase) * num
+                result[k_index,5] += num
     for i in range(1,result.shape[0]):
+        if result[i,5] == 0: continue
         result[i,0]     = (result[i,0]/result[i,5])*k_fund
         result[i,1]  = (result[i,1]/result[i,5])*(box_size[0]/dims[0]**2) * (box_size[1]/dims[1]**2) * (box_size[2]/dims[2]**2)
         result[i,2]  = (result[i,2]*5.0/result[i,5])*(box_size[0]/dims[0]**2) * (box_size[1]/dims[1]**2) * (box_size[2]/dims[2]**2)
@@ -86,15 +87,21 @@ def powspec_fundamental(delta, box_size, k_lim):
     s = time.time()
     print(f"Computing Pk", flush=True)
     results =  pk_from_delta_k(delta_k, np.asarray(dims), np.asarray(box_size))
+    
     mask = results[:,0] < k_lim
     print(f"Done in {time.time() - s} s", flush=True)
-
+    print(results[mask,0])
+    print(results[mask,1])
+    print(results[mask,4])
     return results[mask]
 
     
 
 
 if __name__ == '__main__':
+    import Pk_library as PKL
+
+
     
     test_fn = "/home2/dfelipe/projects/ir_models/data/dmdens_hr.npy"
     s = time.time()
@@ -102,13 +109,20 @@ if __name__ == '__main__':
     print(f"Loading in {time.time() - s} s", flush=True)
     s = time.time()
     print("Rebinning", flush=True)
-    delta = rebin_field(delta, (1024, 1024, 1024))
+    delta = rebin_field(delta, (256, 256, 256))
     delta /= delta.mean()
     delta -= 1.
     print(f"Rebin in {time.time() - s} s")
     box_size = (1000., 1000., 1000.)
-    k_lim = np.pi * min(delta.shape) / min(box_size)
+    k_ny = np.pi * min(delta.shape) / min(box_size)
 
-    results = powspec_fundamental(delta, box_size, k_lim)
+    #results = powspec_fundamental(delta, box_size, k_ny)
+    # compute power spectrum
+    Pk = PKL.Pk(delta, box_size[0], 0, 'CIC', 16)
+    results = np.c_[Pk.k3D, Pk.Pk, Pk.Pkphase, Pk.Nmodes3D]
+
     np.save("tests_py.npy", results)
+
+
+
 

@@ -6,6 +6,7 @@ using FortranFiles
 using UnicodePlots
 using Statistics
 using CSV
+using Profile
 #pyplot()
 
 @testset "CosmoWeb.jl" begin
@@ -39,7 +40,9 @@ hr_name = "/data5/UNITSIM/1Gpc_4096/fixedAmp_InvPhase_001/DM_DENS/dmdens_cic_128
 heatmap(log10.(dropdims(mean(delta,dims=1), dims=1) .+ 1.), aspect=1)
 #savefig(p1, "/home2/dfelipe/codes/CosmoWeb/test/test.png")
 println("Rebinning field...")
-@time delta = CosmoWeb._rebin_field(delta, (2, 2, 2))
+
+@time delta = CosmoWeb._rebin_field(delta, (8, 8, 8))
+
 
 #@time delta = CosmoWeb.rebin_field(delta, (4, 4, 4))
 #@time delta = NNlib.meanpool(delta, (4,))
@@ -50,9 +53,10 @@ heatmap(dropdims(mean(delta,dims=1), dims=1))
 p2 = heatmap(dropdims(mean(delta,dims=1), dims=1), aspect=1)
 
 println("Computing Pk of field...")
-@time k_edges, pk, _, _ = CosmoWeb.powspec_fundamental(delta, SVector{3}(1000.,1000.,1000.), pi * size(delta,1) / 1000.)
 
-CSV.write("/home2/dfelipe/codes/CosmoWeb/test/test.csv", (k=k_edges, pk0=pk[1], pk2=pk[2]))
+@time k_edges, pk, _, n_modes = CosmoWeb.powspec_fundamental(delta, SVector{3}(1f3,1f3,1f3), Float32(pi * size(delta,1) / 1000.))
+
+CSV.write("/home2/dfelipe/codes/CosmoWeb/test/test.csv", (k=k_edges, pk0=pk[1], pk2=pk[2], nmodes=n_modes))
 #p1 = plot(k_edges, k_edges.*pk[1], xaxis=:log)
 #@show p1
 #plot!(k_edges, k_edges.*pk[2], xaxis=:log)
