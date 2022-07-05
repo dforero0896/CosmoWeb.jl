@@ -1,5 +1,6 @@
 module CosmoWeb
 
-# Write your package code here.
+include("cosmic_web.jl")
+include("correlations.jl")
 
 end
