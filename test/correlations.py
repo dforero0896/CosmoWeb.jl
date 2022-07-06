@@ -90,9 +90,7 @@ def powspec_fundamental(delta, box_size, k_lim):
     
     mask = results[:,0] < k_lim
     print(f"Done in {time.time() - s} s", flush=True)
-    print(results[mask,0])
-    print(results[mask,1])
-    print(results[mask,4])
+    
     return results[mask]
 
     
@@ -113,6 +111,8 @@ if __name__ == '__main__':
     delta /= delta.mean()
     delta -= 1.
     print(f"Rebin in {time.time() - s} s")
+    #delta = np.random.normal(size = (1024,1024,1024)).astype(np.float32)
+    
     box_size = (1000., 1000., 1000.)
     k_ny = np.pi * min(delta.shape) / min(box_size)
 
