@@ -107,7 +107,7 @@ if __name__ == '__main__':
     print(f"Loading in {time.time() - s} s", flush=True)
     s = time.time()
     print("Rebinning", flush=True)
-    delta = rebin_field(delta, (256, 256, 256))
+    delta = rebin_field(delta, (1024, 1024, 1024))
     delta /= delta.mean()
     delta -= 1.
     print(f"Rebin in {time.time() - s} s")

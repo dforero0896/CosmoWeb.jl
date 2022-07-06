@@ -11,7 +11,7 @@ ax[1].semilogx(k, pk2)
 
 results = np.load("tests_py.npy")
 k, pk0, pk2, _, _, n_modes= np.split(results, 6, axis=1)
-mask = k < 0.8
+mask = k < 1.8
 k = k[mask]
 pk0 = pk0[mask]
 pk2 = pk2[mask]
