@@ -32,13 +32,14 @@ end
 test_fn = "/home2/dfelipe/projects/ir_models/data/dmdens_hr.npy"
 hr_name = "/data5/UNITSIM/1Gpc_4096/fixedAmp_InvPhase_001/DM_DENS/dmdens_cic_128.dat"
 
-@time delta = read_fortran_field(hr_name)
-#delta = randn(Float32, (1024,1024,1024))
-println("Rebinning field...")
-@time delta = CosmoWeb._rebin_field(delta, (8, 8, 8))
-println("Normalizing field...")
-delta ./= mean(delta)
-delta .-= 1.
+#@time delta = read_fortran_field(hr_name)
+#println("Rebinning field...")
+#@time delta = CosmoWeb._rebin_field(delta, (8, 8, 8))
+#println("Normalizing field...")
+#delta ./= mean(delta)
+#delta .-= 1.
+field_size = 512
+delta = randn(Float32, (field_size,field_size,field_size))
 
 println("Computing Pk of field...")
 @time k_edges, pk, _, n_modes = CosmoWeb.powspec_fundamental(delta, SVector{3}(1f3,1f3,1f3), Float32(pi * size(delta,1) / 1000.))
