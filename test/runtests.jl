@@ -33,17 +33,17 @@ end
 test_fn = "/home2/dfelipe/projects/ir_models/data/dmdens_hr.npy"
 hr_name = "/data5/UNITSIM/1Gpc_4096/fixedAmp_InvPhase_001/DM_DENS/dmdens_cic_128.dat"
 
-@time delta = read_fortran_field(hr_name)
+@time delta = read_fortran_field(hr_name);
 println("Rebinning field...")
-@time delta = CosmoWeb._rebin_field(delta, (16, 16, 16))
+@time delta = CosmoWeb._rebin_field(delta, (4, 4, 4));
 println("Normalizing field...")
-delta ./= mean(delta)
-delta .-= 1.
+delta ./= mean(delta);
+delta .-= 1.;
 #field_size = 128
 #delta = randn(Float32, (field_size,field_size,field_size))
 box_size = SVector{3}(1f3,1f3,1f3)
 
-p = heatmap(dropdims(mean(delta, dims=1), dims=1), aspect = 1)
+p = heatmap(log.(dropdims(mean(delta, dims=1), dims=1) .+ 2.), title="dm")
 savefig(p, "/home2/dfelipe/codes/CosmoWeb/test/test.png")
 
 
@@ -55,9 +55,8 @@ savefig(fin_plot, "/home2/dfelipe/codes/CosmoWeb/test/test.png")
 CSV.write("/home2/dfelipe/codes/CosmoWeb/test/test.csv", (k=k_edges, pk0=pk[1,:], pk2=pk[2,:], nmodes=n_modes))
 
 
-@time invariants = CosmoWeb.compute_tidal_invariants(delta, box_size, 0f0);
-
-delta_lin = invariants[1];
-p3 = heatmap(dropdims(mean(-delta_lin, dims=1), dims=1), aspect = 1)
-fin_plot = plot(p, p3, p2, dpi=200, size=(1000,1000), layout = (2,2))
+@time invariants = CosmoWeb.compute_tidal_invariants(delta, box_size, 5f0);
+pinv = [heatmap(dropdims(mean(-invariants[i], dims=1), dims=1), title="I$i") for i in 1:6]
+fin_plot = plot(p, pinv..., p2, dpi=200, size=(1000,700), layout = (3,3))
+savefig(fin_plot, "/home2/dfelipe/codes/CosmoWeb/test/test.png")
 

@@ -76,7 +76,7 @@ function compute_tidal_field(delta::Array{<:T, 3}, box_size::SVector{3, T}, smoo
     k_space_buffer = similar(init_k)
     tidal_field = [Array{Float32, 3}(undef, size(delta)) for i=1:6]
     
-    
+    println("Computing tidal field components.")
     #
     # 1,1 element is index 1
     tidal_field_ab!(1, 1, ks, init_k, smoothing, k_space_buffer)
@@ -106,23 +106,23 @@ end
 function compute_tidal_eigenvalues(delta::Array{<:T, 3}, box_size::SVector{3, T}, smoothing::T) where T<:AbstractFloat
 
     tidal_field = compute_tidal_field(delta, box_size, smoothing)
-
-    matrix_buffer = Matrix{Float32}(undef, (3,3))
-    vector_buffer = Vector{Float32}(undef, 3)
-    eigenvalues = [Array{Float32, 3}(undef, size(delta)) for i=1:3]
-    for I in CartesianIndices(delta)
+    println("Computing tidal field eigenvalues.")
+    matrix_buffers = [Matrix{T}(undef, (3,3)) for _ in 1:Threads.nthreads()]
+    vector_buffers = [Vector{T}(undef, 3) for _ in 1:Threads.nthreads()]
+    eigenvalues = [Array{T, 3}(undef, size(delta)) for i=1:3]
+    @inbounds Threads.@threads for I in CartesianIndices(delta)
         i, j, k = Tuple(I)
-        matrix_buffer[1,1] = tidal_field[1][i,j,k]
-        matrix_buffer[2,1] = tidal_field[2][i,j,k]
-        matrix_buffer[3,1] = tidal_field[3][i,j,k]
-        matrix_buffer[2,2] = tidal_field[4][i,j,k]
-        matrix_buffer[3,2] = tidal_field[5][i,j,k]
-        matrix_buffer[3,3] = tidal_field[6][i,j,k]
-        vector_buffer .= eigvals!(Hermitian(matrix_buffer,:L))
+        matrix_buffers[Threads.threadid()][1,1] = tidal_field[1][i,j,k]
+        matrix_buffers[Threads.threadid()][2,1] = tidal_field[2][i,j,k]
+        matrix_buffers[Threads.threadid()][3,1] = tidal_field[3][i,j,k]
+        matrix_buffers[Threads.threadid()][2,2] = tidal_field[4][i,j,k]
+        matrix_buffers[Threads.threadid()][3,2] = tidal_field[5][i,j,k]
+        matrix_buffers[Threads.threadid()][3,3] = tidal_field[6][i,j,k]
+        vector_buffers[Threads.threadid()] .= eigvals!(Hermitian(matrix_buffers[Threads.threadid()],:L))
 
-        eigenvalues[1][i,j,k] = vector_buffer[3]
-        eigenvalues[2][i,j,k] = vector_buffer[2]
-        eigenvalues[3][i,j,k] = vector_buffer[1]
+        eigenvalues[1][i,j,k] = vector_buffers[Threads.threadid()][3]
+        eigenvalues[2][i,j,k] = vector_buffers[Threads.threadid()][2]
+        eigenvalues[3][i,j,k] = vector_buffers[Threads.threadid()][1]
     end
 
     eigenvalues
@@ -131,17 +131,19 @@ end
 
 function compute_tidal_invariants(delta::Array{<:T, 3}, box_size::SVector{3, T}, smoothing::T) where T<:AbstractFloat
 
-    eigenvalues = compute_tidal_eigenvalues(delta, box_size, smoothing)
-    invariants = [zeros(T, size(delta)) for _ in 1:5]
-
-    for I in CartesianIndices(delta)
+    @time eigenvalues = compute_tidal_eigenvalues(delta, box_size, smoothing)
+    @time invariants = [zeros(T, size(delta)) for _ in 1:6]
+    println("Computing tidal field invariants.")
+    @time begin
+    @inbounds Threads.@threads for I in CartesianIndices(delta)
         i,j,k = Tuple(I)
         invariants[1][I] = eigenvalues[1][I] + eigenvalues[2][I] + eigenvalues[3][I]
-        invariants[2][I] = eigenvalues[1][I] * eigenvalues[1][I] + eigenvalues[3][I] * eigenvalues[2][I] * eigenvalues[3][I]
+        invariants[2][I] = eigenvalues[1][I] * eigenvalues[2][I] + eigenvalues[1][I] * eigenvalues[3][I] + eigenvalues[2][I] * eigenvalues[3][I]
         invariants[3][I] = eigenvalues[1][I] * eigenvalues[2][I] * eigenvalues[3][I]
         invariants[4][I] = eigenvalues[1][I]^2 + eigenvalues[2][I]^2 + eigenvalues[3][I]^2
         invariants[5][I] = eigenvalues[1][I]^3 + eigenvalues[2][I]^3 + eigenvalues[3][I]^3
         invariants[6][I] = invariants[1][I] * invariants[2][I]
+    end
     end
     invariants
 end
